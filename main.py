@@ -1,6 +1,8 @@
 import hydra
 from src.data_utils.corpus import Corpus
 from src.retrievers.tf_idf import TFIDF
+from src.retrievers.bm25 import BM25
+from src.retrievers.dpr import DPR
 from src.data_utils.query import Query
 from src.retrievers.utils import retrieveQueryAndGetRelevancies
 from src.evaluation.metrics import Evaluate
@@ -38,9 +40,9 @@ def main(cfg):
     if cfg.retriever.method == 'tf-idf':
         retriever = TFIDF(documents=corpus.all_documents)
     elif cfg.retriever.method == 'bm25':
-        raise NotImplementedError("BM25 retriever is not implemented yet.")
+        retriever = BM25(documents=corpus.all_documents)
     elif cfg.retriever.method == 'dpr':
-        raise NotImplementedError("DPR retriever is not implemented yet.")
+        retriever = DPR(documents=corpus.all_documents)
         
     
     ### Retrieve top-k relevant queries
