@@ -2,9 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from math import sqrt
+from transformers import BertTokenizer
 
 class TransformerEncoder(nn.Module):
     def __init__(self, n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int):
+        super().__init__()
         self.n_layers = n_layers
         self.n_heads = n_heads
         self.emb_dim =    emb_dim
@@ -16,6 +18,8 @@ class TransformerEncoder(nn.Module):
         """
         Instantiate the model.
         """
+        self.embedder = nn.Embedding(num_embeddings=BertTokenizer.from_pretrained('bert-base-uncased').vocab_size, embedding_dim = self.emb_dim)
+
         self.model = nn.TransformerEncoder(encoder_layer=nn.TransformerEncoderLayer(
                 d_model=self.emb_dim, nhead=self.n_heads, dim_feedforward=self.feed_forward_dim, 
                 dropout=0.1, activation='gelu'
@@ -40,4 +44,19 @@ class TransformerEncoder(nn.Module):
         """
         Run a forward pass on the model
         """
-        return self.model(x)
+
+        embedding = self.embedder(x)
+
+
+        print("RESULT: Number of embeddings: ", len(embedding))
+        print("RESULT: Embedding dimension: ", len(embedding[0]))
+        print("RESULT: First ten numbers of first embeding: ", embedding[0][0:11])
+
+        result = self.model(embedding)
+
+        print("RESULT: Number of embeddings: ", len(result))
+        print("RESULT: Embedding dimension: ", len(result[0]))
+        print("RESULT: First ten numbers of first embeding: ", result[0][0:11])
+
+
+        return result

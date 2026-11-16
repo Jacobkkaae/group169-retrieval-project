@@ -7,6 +7,7 @@ from src.data_utils.query import Query
 from src.retrievers.utils import retrieveQueryAndGetRelevancies
 from src.evaluation.metrics import Evaluate
 from src.retrievers.base_retriever import Retriever
+from src.training.trainer import Trainer
 
 @hydra.main(config_path='config', config_name='fiqa_experiment.yaml', version_base=None)
 def main(cfg):
@@ -19,6 +20,7 @@ def main(cfg):
                            ) 
                         for idx in range(corpus.train.num_rows)
                     ]
+    print("Train queries:", len(train_queries))
 
     val_queries =   [Query(corpus.val['question'][idx], 
                          id=corpus.val['query_id'][idx], 
@@ -42,7 +44,16 @@ def main(cfg):
     elif cfg.retriever.method == 'bm25':
         retriever = BM25(documents=corpus.all_documents)
     elif cfg.retriever.method == 'dpr':
-        retriever = DPR(documents=corpus.all_documents)
+        retriever = DPR(cfg=cfg.model)
+        
+
+        if not cfg.model.get('query_encoder_weights_path', None):
+            trainer = Trainer(corpus, train_queries)
+            #print("query encoder: ", retriever.query_encoder)
+            #print("document encoder: ", retriever.document_encoder)
+            trainer.train(query_encoder=retriever.query_encoder, document_encoder= retriever.document_encoder, cfg = cfg)
+
+    
         
     
     ### Retrieve top-k relevant queries
