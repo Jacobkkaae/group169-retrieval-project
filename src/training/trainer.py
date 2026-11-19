@@ -12,6 +12,7 @@ class Trainer:
         self.train_queries = train_queries
         #self.optimizer_query_encoder = torch.optim.Adam(query_encoder.parameters(), lr=0.001, momentum=0.9)
         #self.optimizer_document_encoder = torch.optim.Adam(document_encoder.parameters(), lr=0.001, momentum=0.9)
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 
     def train(self, query_encoder: nn.Module, document_encoder: nn.Module, cfg):
@@ -48,11 +49,9 @@ class Trainer:
             raise NotImplementedError()
 
     
-    def tokenize(self, sentence):
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    def tokenize(self, sentence):        
         
-        
-        tokens = tokenizer(sentence, padding = "max_length", max_length = 1000)
+        tokens = self.tokenizer(sentence, padding = "max_length", max_length = 1000)
 
         return tokens["input_ids"][0]
 

@@ -48,15 +48,16 @@ class TransformerEncoder(nn.Module):
         embedding = self.embedder(x)
 
 
-        print("RESULT: Number of embeddings: ", len(embedding))
-        print("RESULT: Embedding dimension: ", len(embedding[0]))
-        print("RESULT: First ten numbers of first embeding: ", embedding[0][0:11])
+        print("Before embedding: Number of embeddings: ", len(embedding))
+        print("Before embedding: Embedding dimension: ", len(embedding[0]))
+        print("Before embedding: First ten numbers of first embeding: ", embedding[0][0:11])
 
         result = self.model(embedding)
 
-        print("RESULT: Number of embeddings: ", len(result))
-        print("RESULT: Embedding dimension: ", len(result[0]))
-        print("RESULT: First ten numbers of first embeding: ", result[0][0:11])
+        print("After embedding: Number of embeddings: ", len(result))
+        print("After embedding: Embedding dimension: ", len(result[0]))
+        print("After embedding: First ten numbers of first embeding: ", result[0][0:11])
+        print()
 
 
         return result

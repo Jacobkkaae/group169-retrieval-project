@@ -1,5 +1,7 @@
 from src.retrievers.base_retriever import Retriever
 from src.data_utils.query import Query
+from transformers import BertTokenizer
+
 
 def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: int):
     """
@@ -21,3 +23,26 @@ def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: in
                 query_relevancies.append(False)
         relevancies.append(query_relevancies)
     return relevancies
+
+def tokenize(sentence: str, tokenizer):      
+        
+        tokens = tokenizer(sentence, padding = "max_length", max_length = 1000)
+
+        print(tokens["input_ids"])
+
+        return tokens["input_ids"]
+
+def createIndexDict(corpus):
+    doc_id_to_index = {}
+    for index, document in enumerate(corpus.all_documents['document_id']):
+            for doc_id in document:
+                doc_id_to_index[doc_id] =  index
+
+    return doc_id_to_index
+
+def getDocumentText(doc_id_to_index, document_id, corpus):
+    idx = doc_id_to_index[document_id]
+    subIdx = corpus.all_documents['document_id'][idx].index(document_id)
+    return corpus.all_documents['text'][idx][subIdx]
+
+     
