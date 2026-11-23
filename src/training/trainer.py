@@ -4,56 +4,71 @@ from src.training.loss import DPRLoss
 from src.training.dataset_real import Dataset_real
 from torch.utils.data import DataLoader
 from transformers import BertTokenizer
+import random
+from src.retrievers.models.encoder import TransformerEncoder
+from src.retrievers.dpr import DPR
 
 class Trainer:
-    def __init__(self, corpus, train_queries):
+    def __init__(self, retriever: DPR, corpus, cfg):
         self.criterion = DPRLoss()
         self.corpus = corpus
-        self.train_queries = train_queries
+        self.cfg = cfg
         #self.optimizer_query_encoder = torch.optim.Adam(query_encoder.parameters(), lr=0.001, momentum=0.9)
         #self.optimizer_document_encoder = torch.optim.Adam(document_encoder.parameters(), lr=0.001, momentum=0.9)
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.retriever = retriever
 
 
-    def train(self, query_encoder: nn.Module, document_encoder: nn.Module, cfg):
+    def train(self):
 
-        training_dataset = Dataset_real(self.corpus.ds['train'])
+        dataset = Dataset_real(self.corpus.ds['train'])
 
-        dataloader = DataLoader(training_dataset, batch_size=1,
-                        shuffle=True, num_workers=0)
+        dataloader = DataLoader(dataset, batch_size=self.cfg.model.batch_size,
+                        shuffle=True, num_workers=0, collate_fn=self.collate_function)
 
 
         for index, example in enumerate(dataloader): 
-            print("example question: ", example['question'])
 
-            token_ids_question = self.tokenize(sentence = example['question'], max_length=cfg.model.max_token_length)
-            token_ids_question_tensor = torch.tensor(token_ids_question)
-            query_result = query_encoder.forward(token_ids_question_tensor)
-
-            tokenized_texts = []
-            print("Length of example text: ", len(example['text']))
-            for text in example['text']: 
-                print("Example text: ", text)
-                token_ids_document = self.tokenize(sentence = text, max_length=cfg.model.max_token_length)
-                tokenized_texts.append(token_ids_document)
-
-            print("tokenized texts: ", len(tokenized_texts))
-            print("Amount of token IDS in first tokenized text: ", len(tokenized_texts[0]))
-            
-            token_ids_question_tensor = torch.tensor(tokenized_texts)
-            print("Tokenized texts shape: ", token_ids_question_tensor.shape)
-            document_result = document_encoder.forward(token_ids_question_tensor)
+            tokenized_questions_tensor = torch.tensor(example['questions'])
+            tokenized_texts_tensor = torch.tensor(example['texts'])
+            query_ids = example['query_ids']
+            doc_ids = example['doc_ids']
 
 
+            embedded_questions = self.retriever.query_encoder.forward(tokenized_questions_tensor)
+            embedded_documents = self.retriever.document_encoder.forward(tokenized_texts_tensor)
 
-            raise NotImplementedError()
+            print(embedded_questions)
+            print(embedded_documents)
 
-    
+            question_cosine_scores = self.retriever.compute_cosine_scores(embedded_questions.unsqueeze(0), embedded_documents.unsqueeze(0))
+
+            print(question_cosine_scores)
+
+            if index > 2:
+                return 0
+
+    def collate_function(self, batch):
+        
+        tokenized_questions = []
+        query_ids = []
+        tokenized_texts = []
+        document_ids = []
+
+        for index, example in enumerate(batch):
+            randomly_chosen_doc = random.randint(0, len(example['text'])-1)
+            tokenized_questions.append(self.tokenize(example['question'], self.cfg.model.max_token_length))
+            query_ids.append(example['query_id'])
+            tokenized_texts.append(self.tokenize(example['text'][randomly_chosen_doc], self.cfg.model.max_token_length)) #brug rand i stedt
+            document_ids.append(example['document_id'][randomly_chosen_doc])
+
+        return { "questions": tokenized_questions, "texts": tokenized_texts, "query_ids": query_ids, "doc_ids":document_ids }
+
     def tokenize(self, sentence, max_length: int):        
         
         tokens = self.tokenizer(sentence, padding = "max_length", max_length = max_length)
 
-        return tokens["input_ids"][0]
+        return tokens["input_ids"]
 
         
 

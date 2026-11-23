@@ -10,6 +10,9 @@ from src.retrievers.base_retriever import Retriever
 from src.training.trainer import Trainer
 from src.retrievers.utils import tokenize, getDocumentText, createIndexDict
 import torch
+from src.training.dataset_real import Dataset_real
+from datasets import concatenate_datasets
+from torch.utils.data import ConcatDataset
 
 @hydra.main(config_path='config', config_name='fiqa_experiment.yaml', version_base=None)
 def main(cfg):
@@ -36,6 +39,8 @@ def main(cfg):
 
     all_queries = train_queries + val_queries 
 
+    raw_ds = concatenate_datasets([corpus.ds['train'], corpus.ds['validation']])
+
     if cfg.dataset.name == 'fiqa':
         test_queries =  [Query(corpus.test['question'][idx], 
                             id=corpus.test['query_id'][idx], 
@@ -47,10 +52,11 @@ def main(cfg):
         print("test queries: ", len(test_queries))
     
         all_queries += test_queries
+        raw_ds = concatenate_datasets([raw_ds, corpus.ds['test']]) 
 
     print("all queries amount: ", len(all_queries))
 
-
+    dataset = Dataset_real(raw_ds)
     
     retriever: Retriever = None
     
@@ -67,24 +73,22 @@ def main(cfg):
         if cfg.model.mode == 'inference':
             top_k_documents, top_k_cosine_scores = retriever.run_inference(all_queries, corpus, k_value, examples)
 
-            for index, question in enumerate(top_k_documents):
-                print("most relevant documents for question ", index, ": ")
-                for index2, document in enumerate(question):
-                    print("document: ", document, ": cosine score: ", (top_k_cosine_scores[index][index2]).item())
-                print("actual most relevant documents for question ", index, ": ", all_queries[index].relevant_document_ids)
+            for question_index, question in enumerate(top_k_documents):
+                print("most relevant documents for question ", question_index, ": ")
+                for document_index, document in enumerate(question):
+                    print("document: ", document, ": cosine score: ", (top_k_cosine_scores[question_index][document_index]).item())
+                print("actual most relevant documents for question ", question_index, ": ", all_queries[question_index].relevant_document_ids)
                 print()
 
 
         elif cfg.model.mode == 'train':
             if not cfg.model.get('query_encoder_weights_path', None):
-                trainer = Trainer(corpus, train_queries)
-                print("query encoder: ", retriever.query_encoder)
-                print("document encoder: ", retriever.document_encoder)
-                trainer.train(query_encoder=retriever.query_encoder, document_encoder= retriever.document_encoder, cfg = cfg)
+                trainer = Trainer(corpus=corpus, retriever=retriever, cfg = cfg)
+                trainer.train()
             
                     
 
-    
+    return 0
         
     raise NotImplementedError
 

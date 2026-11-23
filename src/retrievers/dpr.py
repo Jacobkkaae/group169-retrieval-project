@@ -1,12 +1,12 @@
 from src.retrievers.models.encoder import TransformerEncoder
 import torch.nn as nn
-from src.training.trainer import Trainer
 from src.retrievers.utils import tokenize, getDocumentText, createIndexDict
 import torch
 from transformers import BertTokenizer
 
-class DPR:
+class DPR(nn.Module):
     def __init__(self, cfg):
+        super().__init__()
         self.cfg = cfg
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.__load_models()
@@ -90,15 +90,15 @@ class DPR:
 
         return embedded_questions, embedded_documents
 
-    def compute_cosine_scores(self, flattened_embedded_questions, flattened_embedded_documents):
+    def compute_cosine_scores(self, embedded_questions, embedded_documents):
         cos = nn.CosineSimilarity(dim=1, eps=1e-6)
 
         question_cosine_scores = []
                 
-        for flattened_embedded_question in flattened_embedded_questions:
+        for embedded_question in embedded_questions:
             temp_cosine_scores = []
-            for flattened_embedded_document in flattened_embedded_documents:
-                result = cos(flattened_embedded_question, flattened_embedded_document)
+            for embedded_document in embedded_documents:
+                result = cos(embedded_question, embedded_document)
                 temp_cosine_scores.append(result)
                 
 
@@ -111,7 +111,7 @@ class DPR:
         top_k_sorted_document_cosine_scores = []
 
         for document_cosine_scores in question_cosine_scores:
-            document_cosine_scores_tensor = torch.Tensor(document_cosine_scores)
+            document_cosine_scores_tensor = torch.tensor(document_cosine_scores)
             sorted_document_cosine_scores, sort_indices = torch.sort(document_cosine_scores_tensor, descending=True)
             temp_top_k_sorted_document_cosine_scores = sorted_document_cosine_scores[:k_value]
             top_k_sorted_document_cosine_scores.append(temp_top_k_sorted_document_cosine_scores)

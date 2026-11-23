@@ -29,7 +29,7 @@ class TransformerEncoder(nn.Module):
 
         self.model = nn.TransformerEncoder(encoder_layer=nn.TransformerEncoderLayer(
                 d_model=self.emb_dim, nhead=self.n_heads, dim_feedforward=self.feed_forward_dim, 
-                dropout=0.1, activation='gelu'
+                dropout=0.1, activation='gelu', batch_first= True
             ),num_layers=self.n_layers
         )
 
@@ -49,7 +49,7 @@ class TransformerEncoder(nn.Module):
 
     def forward(self, x: torch.tensor) -> torch.tensor:
         """
-        Run a forward pass on the model
+        Given a batch_size x sequence_length x emb_dim tensor, run a forward pass on the model
         """
 
         embedding = self.embedder(x)
