@@ -6,13 +6,14 @@ from transformers import BertTokenizer
 from src.retrievers.models.positional_encoding import PositionalEncoding 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int):
+    def __init__(self, n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int, pooling: str):
         super().__init__()
         self.n_layers = n_layers
         self.n_heads = n_heads
         self.emb_dim =    emb_dim
         self.hidden_dim = hidden_dim
         self.feed_forward_dim = feed_forward_dim
+        self.pooling = pooling
         self.setup_model()
 
     def setup_model(self):
@@ -36,13 +37,13 @@ class TransformerEncoder(nn.Module):
         Given a batch_size x sequence_length x emb_dim tensor, pool the input along the sequence_length dimension 
         Returns: A pooled vector of shape batch_size x emb_dim
         """
-        if self.cfg.model.pooling_type == 'cls':
-            raise NotImplementedError()
+        if self.pooling == 'cls':
+            return x[:, 0,:]
         
-        elif self.cfg.model.pooling_type == 'max':
+        elif self.pooling== 'max':
             return torch.max(x, dim=1).values
         
-        elif self.cfg.model.pooling_type == 'mean':
+        elif self.pooling == 'mean':
             return torch.mean(x, dim=1).values
 
     def forward(self, x: torch.tensor) -> torch.tensor:
@@ -55,7 +56,9 @@ class TransformerEncoder(nn.Module):
         positional_embedding = self.positional_encoder(embedding)
 
 
-        result = self.model(positional_embedding)
+        encoding = self.model(positional_embedding)
+
+        pooled_encoding = self.pool(encoding)
 
 
-        return result
+        return pooled_encoding

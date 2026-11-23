@@ -23,6 +23,7 @@ def main(cfg):
                            ) 
                         for idx in range(corpus.train.num_rows)
                     ]
+    print("train queries: ", len(train_queries))
 
     val_queries =   [Query(corpus.val['question'][idx], 
                          id=corpus.val['query_id'][idx], 
@@ -30,16 +31,24 @@ def main(cfg):
                            ) 
                         for idx in range(corpus.val.num_rows)
                     ]
-    
-    test_queries =  [Query(corpus.test['question'][idx], 
-                           id=corpus.test['query_id'][idx], 
-                           relevant_document_ids=corpus.relevant_ids[corpus.test['query_id'][idx]]
-                           ) 
-                        for idx in range(corpus.test.num_rows)
-                    ]
 
-    all_queries = train_queries + val_queries + test_queries
-    print(len(all_queries))
+    print("val queries: ", len(val_queries))
+
+    all_queries = train_queries + val_queries 
+
+    if cfg.dataset.name == 'fiqa':
+        test_queries =  [Query(corpus.test['question'][idx], 
+                            id=corpus.test['query_id'][idx], 
+                            relevant_document_ids=corpus.relevant_ids[corpus.test['query_id'][idx]]
+                            ) 
+                            for idx in range(corpus.test.num_rows)
+                        ]
+
+        print("test queries: ", len(test_queries))
+    
+        all_queries += test_queries
+
+    print("all queries amount: ", len(all_queries))
 
 
     

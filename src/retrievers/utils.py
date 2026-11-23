@@ -28,9 +28,9 @@ def tokenize(sentence: str, tokenizer):
         
         tokens = tokenizer(sentence, padding = "max_length", max_length = 1000)
 
-        print(tokens["input_ids"])
+        tokens = tokens["input_ids"]
 
-        return tokens["input_ids"]
+        return tokens
 
 def createIndexDict(corpus):
     doc_id_to_index = {}

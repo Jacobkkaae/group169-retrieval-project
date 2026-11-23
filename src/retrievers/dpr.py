@@ -15,10 +15,10 @@ class DPR:
 
         self.query_encoder = TransformerEncoder(n_layers = self.cfg.n_layers, n_heads = self.cfg.n_heads,
                                            emb_dim = self.cfg.emb_dim, hidden_dim = self.cfg.hidden_dim,
-                                           feed_forward_dim = self.cfg.feed_forward_dim)
+                                           feed_forward_dim = self.cfg.feed_forward_dim, pooling=self.cfg.pooling_type)
         self.document_encoder = TransformerEncoder(n_layers = self.cfg.n_layers, n_heads = self.cfg.n_heads,
                                            emb_dim = self.cfg.emb_dim, hidden_dim = self.cfg.hidden_dim,
-                                           feed_forward_dim = self.cfg.feed_forward_dim)
+                                           feed_forward_dim = self.cfg.feed_forward_dim, pooling=self.cfg.pooling_type)
         
         query_weights_path = self.cfg.get('query_encoder_weights_path', None)
         if self.cfg.get('query_encoder_weights_path', None):
@@ -36,9 +36,7 @@ class DPR:
 
         embedded_questions, embedded_documents = self.embed_questions_and_documents(tokenized_questions_tensor, tokenized_documents_tensor)
 
-        flattened_embedded_questions, flattened_embedded_documents = self.flatten_questions_and_docs(embedded_questions, embedded_documents)
-
-        question_cosine_scores = self.compute_cosine_scores(flattened_embedded_questions, flattened_embedded_documents)
+        question_cosine_scores = self.compute_cosine_scores(embedded_questions, embedded_documents)
 
         top_k_documents = self.compute_top_k_docs(question_cosine_scores, k_value, document_order)
         
@@ -92,21 +90,6 @@ class DPR:
 
         return embedded_questions, embedded_documents
 
-    def flatten_questions_and_docs(self, embedded_questions, embedded_documents):
-        flattened_embedded_questions = []
-        flattened_embedded_documents = []
-
-        for embedded_question in embedded_questions:
-            embedded_question = torch.flatten(embedded_question, 1, 2)
-            flattened_embedded_questions.append(embedded_question)
-
-
-        for embedded_document in embedded_documents:
-            embedded_document = torch.flatten(embedded_document, 1, 2)
-            flattened_embedded_documents.append(embedded_document)
-
-        return flattened_embedded_questions, flattened_embedded_documents
-
     def compute_cosine_scores(self, flattened_embedded_questions, flattened_embedded_documents):
         cos = nn.CosineSimilarity(dim=1, eps=1e-6)
 
@@ -139,4 +122,3 @@ class DPR:
             top_k_documents.append(temp_top_k_documents)
 
         return top_k_documents
-    
