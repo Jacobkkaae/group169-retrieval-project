@@ -38,12 +38,12 @@ class DPR:
 
         question_cosine_scores = self.compute_cosine_scores(embedded_questions, embedded_documents)
 
-        top_k_documents = self.compute_top_k_docs(question_cosine_scores, k_value, document_order)
+        top_k_documents, top_k_cosine_scores = self.compute_top_k_docs(question_cosine_scores, k_value, document_order)
         
         print(top_k_documents)
 
 
-        return top_k_documents
+        return top_k_documents, top_k_cosine_scores
 
     def tokenize_questions_and_docs(self, all_queries, examples, doc_id_to_index, corpus):
         question_order = []
@@ -108,11 +108,13 @@ class DPR:
 
     def compute_top_k_docs(self, question_cosine_scores, k_value, document_order):
         top_k_documents = []
+        top_k_sorted_document_cosine_scores = []
 
         for document_cosine_scores in question_cosine_scores:
             document_cosine_scores_tensor = torch.Tensor(document_cosine_scores)
             sorted_document_cosine_scores, sort_indices = torch.sort(document_cosine_scores_tensor, descending=True)
-            top_k_sorted_document_cosine_scores = sorted_document_cosine_scores[:k_value]
+            temp_top_k_sorted_document_cosine_scores = sorted_document_cosine_scores[:k_value]
+            top_k_sorted_document_cosine_scores.append(temp_top_k_sorted_document_cosine_scores)
             values, indices = torch.topk(sort_indices, k_value, largest=False)
             temp_top_k_documents = []
             
@@ -121,4 +123,4 @@ class DPR:
 
             top_k_documents.append(temp_top_k_documents)
 
-        return top_k_documents
+        return top_k_documents, top_k_sorted_document_cosine_scores

@@ -64,22 +64,23 @@ def main(cfg):
         k_value = 3
         examples = 10
 
-        top_k_documents = retriever.run_inference(all_queries, corpus, k_value, examples)
+        if cfg.model.mode == 'inference':
+            top_k_documents, top_k_cosine_scores = retriever.run_inference(all_queries, corpus, k_value, examples)
 
-        for index, question in enumerate(top_k_documents):
-            print("most relevant documents for question ", index, ": ", question)
-            print("actual most relevant documents for question ", index, ": ", all_queries[index].relevant_document_ids)
+            for index, question in enumerate(top_k_documents):
+                print("most relevant documents for question ", index, ": ")
+                for index2, document in enumerate(question):
+                    print("document: ", document, ": cosine score: ", (top_k_cosine_scores[index][index2]).item())
+                print("actual most relevant documents for question ", index, ": ", all_queries[index].relevant_document_ids)
+                print()
 
 
-
-        
-
-        #if not cfg.model.get('query_encoder_weights_path', None):
-            # trainer = Trainer(corpus, train_queries)
-            # print("query encoder: ", retriever.query_encoder)
-            # print("document encoder: ", retriever.document_encoder)
-            # trainer.train(query_encoder=retriever.query_encoder, document_encoder= retriever.document_encoder, cfg = cfg)
-        #else:
+        elif cfg.model.mode == 'train':
+            if not cfg.model.get('query_encoder_weights_path', None):
+                trainer = Trainer(corpus, train_queries)
+                print("query encoder: ", retriever.query_encoder)
+                print("document encoder: ", retriever.document_encoder)
+                trainer.train(query_encoder=retriever.query_encoder, document_encoder= retriever.document_encoder, cfg = cfg)
             
                     
 
