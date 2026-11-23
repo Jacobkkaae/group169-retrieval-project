@@ -52,8 +52,10 @@ def main(cfg):
         retriever = BM25(documents=corpus.all_documents)
     elif cfg.retriever.method == 'dpr':
         retriever = DPR(cfg=cfg.model)
+        k_value = 3
+        examples = 3
 
-        embedded_questions, embedded_documents = retriever.run_inference(all_queries, corpus)
+        embedded_questions, embedded_documents = retriever.run_inference(all_queries, corpus, k_value, examples)
 
         print("length of question emb: ", len(embedded_questions))
         print("length of doc emb: ", len(embedded_documents))

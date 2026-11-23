@@ -8,6 +8,7 @@ from transformers import BertTokenizer
 class DPR:
     def __init__(self, cfg):
         self.cfg = cfg
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.__load_models()
     
     def __load_models(self):
@@ -27,53 +28,115 @@ class DPR:
         if self.cfg.get('document_encoder_weights_path', None):
             self.document_encoder.load_state_dict(document_weights_path)
 
-    def run_inference(self, all_queries, corpus):
+    def run_inference(self, all_queries, corpus, k_value, examples):
         doc_id_to_index = createIndexDict(corpus)
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-
-        examples = 2
         
+        tokenized_questions_tensor, tokenized_documents_tensor, question_order, document_order = self.tokenize_questions_and_docs(all_queries=all_queries, 
+                                                                                                                    examples=examples, doc_id_to_index= doc_id_to_index, corpus = corpus)
+
+        embedded_questions, embedded_documents = self.embed_questions_and_documents(tokenized_questions_tensor, tokenized_documents_tensor)
+
+        flattened_embedded_questions, flattened_embedded_documents = self.flatten_questions_and_docs(embedded_questions, embedded_documents)
+
+        question_cosine_scores = self.compute_cosine_scores(flattened_embedded_questions, flattened_embedded_documents)
+
+        top_k_documents = self.compute_top_k_docs(question_cosine_scores, k_value, document_order)
+        
+        print(top_k_documents)
+
+
+        return embedded_questions, embedded_documents
+
+    def tokenize_questions_and_docs(self, all_queries, examples, doc_id_to_index, corpus):
         question_order = []
         document_order = []
 
         tokenized_questions = []
         tokenized_documents = []
-
-
+         
         for index, query in enumerate(all_queries):
-            question_order.append(query.id)
-            tokenized_questions.append(tokenize(query.text, tokenizer))
-            if index > examples:
-                break
-
-        tokenized_questions_tensor = torch.tensor(tokenized_questions)
-
+                    question_order.append(query.id)
+                    tokenized_questions.append(tokenize(query.text, self.tokenizer))
+                    if index == examples-1:
+                        break
 
         for question_index, question in enumerate(all_queries):
-            for document_index, document_id in enumerate(question.relevant_document_ids):
-                document_order.append(document_id)
-                document_text = getDocumentText(doc_id_to_index, document_id, corpus)
-                tokenized_documents.append(tokenize(document_text, tokenizer))
-            
-            if question_index > examples:
-                break
+                for document_index, document_id in enumerate(question.relevant_document_ids):
+                    document_order.append(document_id)
+                    document_text = getDocumentText(doc_id_to_index, document_id, corpus)
+                    tokenized_documents.append(tokenize(document_text, self.tokenizer))
+                
+                if question_index == examples-1:
+                    break
 
+        tokenized_questions_tensor = torch.tensor(tokenized_questions)
+        
         tokenized_documents_tensor = torch.tensor(tokenized_documents)
+        
 
+        return tokenized_questions_tensor, tokenized_documents_tensor, question_order, document_order
+
+    def embed_questions_and_documents(self, tokenized_questions_tensor, tokenized_documents_tensor):
         embedded_questions = []
         embedded_documents = []
-
-        for index, tokenized_question in enumerate(tokenized_questions):
+         
+        for index, tokenized_question in enumerate(tokenized_questions_tensor):
             single_tokenized_question_tensor = tokenized_questions_tensor[index]
             question_embedding = self.query_encoder(single_tokenized_question_tensor)
             embedded_questions.append(question_embedding)
 
-        for index, tokenized_document in enumerate(tokenized_documents):
-                    single_tokenized_document_tensor = tokenized_documents_tensor[index]
-                    document_embedding = self.document_encoder(single_tokenized_document_tensor)
-                    embedded_documents.append(document_embedding)
+        for index, tokenized_document in enumerate(tokenized_documents_tensor):
+            single_tokenized_document_tensor = tokenized_documents_tensor[index]
+            document_embedding = self.document_encoder(single_tokenized_document_tensor)
+            embedded_documents.append(document_embedding)
 
         return embedded_questions, embedded_documents
 
+    def flatten_questions_and_docs(self, embedded_questions, embedded_documents):
+        flattened_embedded_questions = []
+        flattened_embedded_documents = []
+
+        for embedded_question in embedded_questions:
+            embedded_question = torch.flatten(embedded_question, 1, 2)
+            flattened_embedded_questions.append(embedded_question)
 
 
+        for embedded_document in embedded_documents:
+            embedded_document = torch.flatten(embedded_document, 1, 2)
+            flattened_embedded_documents.append(embedded_document)
+
+        return flattened_embedded_questions, flattened_embedded_documents
+
+    def compute_cosine_scores(self, flattened_embedded_questions, flattened_embedded_documents):
+        cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+
+        question_cosine_scores = []
+                
+        for flattened_embedded_question in flattened_embedded_questions:
+            temp_cosine_scores = []
+            for flattened_embedded_document in flattened_embedded_documents:
+                result = cos(flattened_embedded_question, flattened_embedded_document)
+                temp_cosine_scores.append(result)
+                
+
+            question_cosine_scores.append(temp_cosine_scores)
+
+        return question_cosine_scores
+
+    def compute_top_k_docs(self, question_cosine_scores, k_value, document_order):
+        top_k_documents = []
+
+        for document_cosine_scores in question_cosine_scores:
+            document_cosine_scores_tensor = torch.Tensor(document_cosine_scores)
+            sorted_document_cosine_scores, sort_indices = torch.sort(document_cosine_scores_tensor, descending=True)
+            top_k_sorted_document_cosine_scores = sorted_document_cosine_scores[:k_value]
+            values, indices = torch.topk(sort_indices, k_value, largest=False)
+            temp_top_k_documents = []
+            
+            for idx in indices:
+                temp_top_k_documents.append(document_order[idx])
+
+            top_k_documents.append(temp_top_k_documents)
+
+        return top_k_documents
+    
