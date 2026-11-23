@@ -15,10 +15,10 @@ class DPR:
 
         self.query_encoder = TransformerEncoder(n_layers = self.cfg.n_layers, n_heads = self.cfg.n_heads,
                                            emb_dim = self.cfg.emb_dim, hidden_dim = self.cfg.hidden_dim,
-                                           feed_forward_dim = self.cfg.feed_forward_dim, pooling=self.cfg.pooling_type)
+                                           feed_forward_dim = self.cfg.feed_forward_dim, pooling=self.cfg.pooling_type, max_token_len= self.cfg.max_token_length)
         self.document_encoder = TransformerEncoder(n_layers = self.cfg.n_layers, n_heads = self.cfg.n_heads,
                                            emb_dim = self.cfg.emb_dim, hidden_dim = self.cfg.hidden_dim,
-                                           feed_forward_dim = self.cfg.feed_forward_dim, pooling=self.cfg.pooling_type)
+                                           feed_forward_dim = self.cfg.feed_forward_dim, pooling=self.cfg.pooling_type, max_token_len= self.cfg.max_token_length)
         
         query_weights_path = self.cfg.get('query_encoder_weights_path', None)
         if self.cfg.get('query_encoder_weights_path', None):
@@ -54,7 +54,7 @@ class DPR:
          
         for index, query in enumerate(all_queries):
                     question_order.append(query.id)
-                    tokenized_questions.append(tokenize(query.text, self.tokenizer))
+                    tokenized_questions.append(tokenize(query.text, self.tokenizer, self.cfg.max_token_length))
                     if index == examples-1:
                         break
 
@@ -62,7 +62,7 @@ class DPR:
                 for document_index, document_id in enumerate(question.relevant_document_ids):
                     document_order.append(document_id)
                     document_text = getDocumentText(doc_id_to_index, document_id, corpus)
-                    tokenized_documents.append(tokenize(document_text, self.tokenizer))
+                    tokenized_documents.append(tokenize(document_text, self.tokenizer, self.cfg.max_token_length))
                 
                 if question_index == examples-1:
                     break

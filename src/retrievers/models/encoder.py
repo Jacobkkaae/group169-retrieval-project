@@ -6,7 +6,7 @@ from transformers import BertTokenizer
 from src.retrievers.models.positional_encoding import PositionalEncoding 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int, pooling: str):
+    def __init__(self, n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int, pooling: str, max_token_len: int):
         super().__init__()
         self.n_layers = n_layers
         self.n_heads = n_heads
@@ -14,6 +14,7 @@ class TransformerEncoder(nn.Module):
         self.hidden_dim = hidden_dim
         self.feed_forward_dim = feed_forward_dim
         self.pooling = pooling
+        self.max_token_len = max_token_len
         self.setup_model()
 
     def setup_model(self):
@@ -24,7 +25,7 @@ class TransformerEncoder(nn.Module):
         # Bert vocab size is 30522
         self.embedder = nn.Embedding(num_embeddings=30522, embedding_dim = self.emb_dim)
 
-        self.positional_encoder = PositionalEncoding(d_model = self.emb_dim, max_len = 1500)
+        self.positional_encoder = PositionalEncoding(d_model = self.emb_dim, max_len = self.max_token_len)
 
         self.model = nn.TransformerEncoder(encoder_layer=nn.TransformerEncoderLayer(
                 d_model=self.emb_dim, nhead=self.n_heads, dim_feedforward=self.feed_forward_dim, 

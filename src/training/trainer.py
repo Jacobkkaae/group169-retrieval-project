@@ -26,7 +26,7 @@ class Trainer:
         for index, example in enumerate(dataloader): 
             print("example question: ", example['question'])
 
-            token_ids_question = self.tokenize(sentence = example['question'])
+            token_ids_question = self.tokenize(sentence = example['question'], max_length=cfg.model.max_token_length)
             token_ids_question_tensor = torch.tensor(token_ids_question)
             query_result = query_encoder.forward(token_ids_question_tensor)
 
@@ -34,7 +34,7 @@ class Trainer:
             print("Length of example text: ", len(example['text']))
             for text in example['text']: 
                 print("Example text: ", text)
-                token_ids_document = self.tokenize(sentence = text)
+                token_ids_document = self.tokenize(sentence = text, max_length=cfg.model.max_token_length)
                 tokenized_texts.append(token_ids_document)
 
             print("tokenized texts: ", len(tokenized_texts))
@@ -49,9 +49,9 @@ class Trainer:
             raise NotImplementedError()
 
     
-    def tokenize(self, sentence):        
+    def tokenize(self, sentence, max_length: int):        
         
-        tokens = self.tokenizer(sentence, padding = "max_length", max_length = 1500)
+        tokens = self.tokenizer(sentence, padding = "max_length", max_length = max_length)
 
         return tokens["input_ids"][0]
 
