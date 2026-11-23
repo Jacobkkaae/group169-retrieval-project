@@ -51,7 +51,7 @@ class Trainer:
     
     def tokenize(self, sentence):        
         
-        tokens = self.tokenizer(sentence, padding = "max_length", max_length = 1000)
+        tokens = self.tokenizer(sentence, padding = "max_length", max_length = 1500)
 
         return tokens["input_ids"][0]
 

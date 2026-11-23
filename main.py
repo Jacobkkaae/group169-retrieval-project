@@ -62,12 +62,13 @@ def main(cfg):
     elif cfg.retriever.method == 'dpr':
         retriever = DPR(cfg=cfg.model)
         k_value = 3
-        examples = 3
+        examples = 10
 
-        embedded_questions, embedded_documents = retriever.run_inference(all_queries, corpus, k_value, examples)
+        top_k_documents = retriever.run_inference(all_queries, corpus, k_value, examples)
 
-        print("length of question emb: ", len(embedded_questions))
-        print("length of doc emb: ", len(embedded_documents))
+        for index, question in enumerate(top_k_documents):
+            print("most relevant documents for question ", index, ": ", question)
+            print("actual most relevant documents for question ", index, ": ", all_queries[index].relevant_document_ids)
 
 
 

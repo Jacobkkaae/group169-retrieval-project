@@ -26,7 +26,7 @@ def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: in
 
 def tokenize(sentence: str, tokenizer):      
         
-        tokens = tokenizer(sentence, padding = "max_length", max_length = 1000)
+        tokens = tokenizer(sentence, padding = "max_length", max_length = 1500)
 
         tokens = tokens["input_ids"]
 

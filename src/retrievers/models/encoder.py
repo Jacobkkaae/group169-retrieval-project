@@ -24,7 +24,7 @@ class TransformerEncoder(nn.Module):
         # Bert vocab size is 30522
         self.embedder = nn.Embedding(num_embeddings=30522, embedding_dim = self.emb_dim)
 
-        self.positional_encoder = PositionalEncoding(d_model = self.emb_dim, max_len = 1000)
+        self.positional_encoder = PositionalEncoding(d_model = self.emb_dim, max_len = 1500)
 
         self.model = nn.TransformerEncoder(encoder_layer=nn.TransformerEncoderLayer(
                 d_model=self.emb_dim, nhead=self.n_heads, dim_feedforward=self.feed_forward_dim, 

@@ -43,7 +43,7 @@ class DPR:
         print(top_k_documents)
 
 
-        return embedded_questions, embedded_documents
+        return top_k_documents
 
     def tokenize_questions_and_docs(self, all_queries, examples, doc_id_to_index, corpus):
         question_order = []
