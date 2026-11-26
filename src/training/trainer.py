@@ -26,6 +26,8 @@ class Trainer:
         dataloader = DataLoader(dataset, batch_size=self.cfg.model.batch_size,
                         shuffle=True, num_workers=0, collate_fn=self.collate_function)
 
+        loss_fn = nn.NLLLoss()
+
 
         for index, example in enumerate(dataloader): 
 
@@ -41,12 +43,26 @@ class Trainer:
             print(embedded_questions)
             print(embedded_documents)
 
-            question_cosine_scores = self.retriever.compute_cosine_scores(embedded_questions.unsqueeze(0), embedded_documents.unsqueeze(0))
+            question_cosine_scores = self.retriever.compute_cosine_scores(embedded_questions, embedded_documents)
 
-            print(question_cosine_scores)
+            targets = torch.arange(self.cfg.model.batch_size)
+
+
+            
+            loss = loss_fn(question_cosine_scores, targets)
+
+            print("question_cosine_scores: ", question_cosine_scores)
+            print("targets: ", targets)
+            print("loss: ", loss)
+
+            #loss.backward()
+
 
             if index > 2:
                 return 0
+
+
+
 
     def collate_function(self, batch):
         

@@ -91,10 +91,11 @@ class DPR(nn.Module):
         return embedded_questions, embedded_documents
 
     def compute_cosine_scores(self, embedded_questions, embedded_documents):
-        cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+        cos = nn.CosineSimilarity(dim=0, eps=1e-6)
 
         question_cosine_scores = []
-                
+
+        
         for embedded_question in embedded_questions:
             temp_cosine_scores = []
             for embedded_document in embedded_documents:
@@ -104,7 +105,10 @@ class DPR(nn.Module):
 
             question_cosine_scores.append(temp_cosine_scores)
 
-        return question_cosine_scores
+
+        question_cosine_scores_tensor = torch.tensor(question_cosine_scores)
+        
+        return question_cosine_scores_tensor
 
     def compute_top_k_docs(self, question_cosine_scores, k_value, document_order):
         top_k_documents = []

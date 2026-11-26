@@ -12,54 +12,67 @@ from src.retrievers.utils import tokenize, getDocumentText, createIndexDict
 import torch
 from src.training.dataset_real import Dataset_real
 from datasets import concatenate_datasets
-from torch.utils.data import ConcatDataset
+from torch.utils.data import ConcatDataset, Dataset
 
 @hydra.main(config_path='config', config_name='fiqa_experiment.yaml', version_base=None)
 def main(cfg):
     ### Load a dataset
     corpus = Corpus(dataset_name=cfg.dataset.name, base_dir=f'{cfg.base_path}/retrieval_data')
 
-    ### Prepare queries
-    train_queries = [Query(corpus.train['question'][idx], 
-                           id=corpus.train['query_id'][idx], 
-                           relevant_document_ids=corpus.relevant_ids[corpus.train['query_id'][idx]]
-                           ) 
-                        for idx in range(corpus.train.num_rows)
-                    ]
+    train_queries = []
+    val_queries = []
+    all_queries = []
+    
+    if corpus.train is not None:
+        ### Prepare queries
+        train_queries = [Query(corpus.train['question'][idx], 
+                            id=corpus.train['query_id'][idx], 
+                            relevant_document_ids=corpus.relevant_ids[corpus.train['query_id'][idx]]
+                            ) 
+                            for idx in range(corpus.train.num_rows)
+                        ]
     print("train queries: ", len(train_queries))
 
-    val_queries =   [Query(corpus.val['question'][idx], 
-                         id=corpus.val['query_id'][idx], 
-                         relevant_document_ids=corpus.relevant_ids[corpus.val['query_id'][idx]]
-                           ) 
-                        for idx in range(corpus.val.num_rows)
-                    ]
-
-    print("val queries: ", len(val_queries))
-
-    all_queries = train_queries + val_queries 
-
-    raw_ds = concatenate_datasets([corpus.ds['train'], corpus.ds['validation']])
-
-    if cfg.dataset.name == 'fiqa':
-        test_queries =  [Query(corpus.test['question'][idx], 
-                            id=corpus.test['query_id'][idx], 
-                            relevant_document_ids=corpus.relevant_ids[corpus.test['query_id'][idx]]
+    if corpus.val is not None:
+        val_queries =   [Query(corpus.val['question'][idx], 
+                            id=corpus.val['query_id'][idx], 
+                            relevant_document_ids=corpus.relevant_ids[corpus.val['query_id'][idx]]
                             ) 
-                            for idx in range(corpus.test.num_rows)
+                            for idx in range(corpus.val.num_rows)
                         ]
 
-        print("test queries: ", len(test_queries))
-    
-        all_queries += test_queries
-        raw_ds = concatenate_datasets([raw_ds, corpus.ds['test']]) 
+        print("val queries: ", len(val_queries))
+
+        all_queries = train_queries + val_queries 
+
+    raw_ds = Dataset()
+    if corpus.ds is Dataset:
+        raw_ds = concatenate_datasets([corpus.ds['train'], corpus.ds['validation']])
+
+    if cfg.dataset.name == 'fiqa':
+        test_queries = []
+
+        if corpus.test is not None:
+            test_queries =  [Query(corpus.test['question'][idx], 
+                                id=corpus.test['query_id'][idx], 
+                                relevant_document_ids=corpus.relevant_ids[corpus.test['query_id'][idx]]
+                                ) 
+                                for idx in range(corpus.test.num_rows)
+                            ]
+
+            print("test queries: ", len(test_queries))
+        
+            all_queries += test_queries
+
+        if corpus.ds is Dataset and raw_ds is Dataset:
+            raw_ds = concatenate_datasets([raw_ds, corpus.ds['test']]) 
 
     print("all queries amount: ", len(all_queries))
 
     dataset = Dataset_real(raw_ds)
     
-    retriever: Retriever = None
-    
+    retriever = Retriever 
+
     ### Initialize retriever
     if cfg.retriever.method == 'tf-idf':
         retriever = TFIDF(documents=corpus.all_documents)
