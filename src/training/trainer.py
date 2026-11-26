@@ -13,10 +13,9 @@ class Trainer:
         self.criterion = DPRLoss()
         self.corpus = corpus
         self.cfg = cfg
-        #self.optimizer_query_encoder = torch.optim.Adam(query_encoder.parameters(), lr=0.001, momentum=0.9)
-        #self.optimizer_document_encoder = torch.optim.Adam(document_encoder.parameters(), lr=0.001, momentum=0.9)
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.retriever = retriever
+        self.optimizer = torch.optim.AdamW(self.retriever.parameters(), lr=0.0001)
 
 
     def train(self):
@@ -26,10 +25,13 @@ class Trainer:
         dataloader = DataLoader(dataset, batch_size=self.cfg.model.batch_size,
                         shuffle=True, num_workers=0, collate_fn=self.collate_function)
 
-        loss_fn = nn.NLLLoss()
+        loss_fn = nn.CrossEntropyLoss(reduce=True)
+        
 
 
-        for index, example in enumerate(dataloader): 
+        for index in range(5): 
+
+            example = next(iter(dataloader))
 
             tokenized_questions_tensor = torch.tensor(example['questions'])
             tokenized_texts_tensor = torch.tensor(example['texts'])
@@ -40,26 +42,22 @@ class Trainer:
             embedded_questions = self.retriever.query_encoder.forward(tokenized_questions_tensor)
             embedded_documents = self.retriever.document_encoder.forward(tokenized_texts_tensor)
 
-            print(embedded_questions)
-            print(embedded_documents)
-
             question_cosine_scores = self.retriever.compute_cosine_scores(embedded_questions, embedded_documents)
 
             targets = torch.arange(self.cfg.model.batch_size)
 
-
-            
             loss = loss_fn(question_cosine_scores, targets)
 
             print("question_cosine_scores: ", question_cosine_scores)
             print("targets: ", targets)
-            print("loss: ", loss)
+            print("loss: ", loss.item())
 
-            #loss.backward()
+            self.optimizer.zero_grad()
 
+            loss.backward()
 
-            if index > 2:
-                return 0
+            self.optimizer.step()
+
 
 
 

@@ -91,24 +91,14 @@ class DPR(nn.Module):
         return embedded_questions, embedded_documents
 
     def compute_cosine_scores(self, embedded_questions, embedded_documents):
-        cos = nn.CosineSimilarity(dim=0, eps=1e-6)
 
-        question_cosine_scores = []
-
+        question_dot_products = torch.zeros(len(embedded_questions), len(embedded_documents))
         
-        for embedded_question in embedded_questions:
-            temp_cosine_scores = []
-            for embedded_document in embedded_documents:
-                result = cos(embedded_question, embedded_document)
-                temp_cosine_scores.append(result)
-                
-
-            question_cosine_scores.append(temp_cosine_scores)
-
-
-        question_cosine_scores_tensor = torch.tensor(question_cosine_scores)
+        for question_index, embedded_question in enumerate(embedded_questions):
+            for document_index, embedded_document in enumerate(embedded_documents):
+                question_dot_products[question_index][document_index] =  torch.dot(embedded_question, embedded_document)
         
-        return question_cosine_scores_tensor
+        return question_dot_products
 
     def compute_top_k_docs(self, question_cosine_scores, k_value, document_order):
         top_k_documents = []
