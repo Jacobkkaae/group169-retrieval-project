@@ -1,6 +1,6 @@
 defaults:
   - _self_  # Hydra magic
-  - dataset: fiqa
+  - dataset: squad
   - retriever: dpr
   - model: encoder
 

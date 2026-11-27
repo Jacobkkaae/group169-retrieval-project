@@ -6,7 +6,7 @@ from transformers import BertTokenizer
 from src.retrievers.models.positional_encoding import PositionalEncoding 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int, pooling: str, max_token_len: int):
+    def __init__(self, n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int, pooling: str, max_token_len: int, device = 'cuda'):
         super().__init__()
         self.n_layers = n_layers
         self.n_heads = n_heads
@@ -15,8 +15,9 @@ class TransformerEncoder(nn.Module):
         self.feed_forward_dim = feed_forward_dim
         self.pooling = pooling
         self.max_token_len = max_token_len
+        self.device = device
         self.setup_model()
-
+        
     def setup_model(self):
         """
         Instantiate the model.
@@ -25,13 +26,17 @@ class TransformerEncoder(nn.Module):
         # Bert vocab size is 30522
         self.embedder = nn.Embedding(num_embeddings=30522, embedding_dim = self.emb_dim)
 
+        self.embedder.to(self.device)
+
         self.positional_encoder = PositionalEncoding(d_model = self.emb_dim, max_len = self.max_token_len)
+        self.positional_encoder.to(self.device)
 
         self.model = nn.TransformerEncoder(encoder_layer=nn.TransformerEncoderLayer(
                 d_model=self.emb_dim, nhead=self.n_heads, dim_feedforward=self.feed_forward_dim, 
-                dropout=0.1, activation='gelu', batch_first= True
-            ),num_layers=self.n_layers
+                dropout=0.1, activation='gelu', batch_first= True, norm_first=True
+            ),num_layers=self.n_layers, norm=nn.LayerNorm(self.emb_dim)
         )
+        self.model.to(self.device)
 
     def pool(self, x):
         """
@@ -41,13 +46,13 @@ class TransformerEncoder(nn.Module):
         if self.pooling == 'cls':
             return x[:, 0,:]
         
-        elif self.pooling== 'max':
-            return torch.max(x, dim=1).values
+        # elif self.pooling== 'max':
+        #     return torch.max(x, dim=1).values
         
-        elif self.pooling == 'mean':
-            return torch.mean(x, dim=1).values
+        # elif self.pooling == 'mean':
+        #     return torch.mean(x, dim=1).values
 
-    def forward(self, x: torch.tensor) -> torch.tensor:
+    def forward(self, x: torch.tensor, attention_mask: torch.tensor) -> torch.tensor:
         """
         Given a batch_size x sequence_length x emb_dim tensor, run a forward pass on the model
         """
@@ -56,8 +61,9 @@ class TransformerEncoder(nn.Module):
 
         positional_embedding = self.positional_encoder(embedding)
 
+        padding_mask = attention_mask == 0
 
-        encoding = self.model(positional_embedding)
+        encoding = self.model(positional_embedding, src_key_padding_mask=padding_mask)
 
         pooled_encoding = self.pool(encoding)
 

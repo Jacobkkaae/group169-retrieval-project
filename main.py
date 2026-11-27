@@ -19,6 +19,9 @@ def main(cfg):
     ### Load a dataset
     corpus = Corpus(dataset_name=cfg.dataset.name, base_dir=f'{cfg.base_path}/retrieval_data')
 
+    print("Cuda installed ?",torch.cuda.is_available())
+    print("GPU name:",torch.cuda.get_device_name(0))
+
     train_queries = []
     val_queries = []
     all_queries = []
@@ -31,7 +34,7 @@ def main(cfg):
                             ) 
                             for idx in range(corpus.train.num_rows)
                         ]
-    print("train queries: ", len(train_queries))
+    #print("train queries: ", len(train_queries))
 
     if corpus.val is not None:
         val_queries =   [Query(corpus.val['question'][idx], 
@@ -41,7 +44,7 @@ def main(cfg):
                             for idx in range(corpus.val.num_rows)
                         ]
 
-        print("val queries: ", len(val_queries))
+        #print("val queries: ", len(val_queries))
 
         all_queries = train_queries + val_queries 
 
@@ -60,16 +63,18 @@ def main(cfg):
                                 for idx in range(corpus.test.num_rows)
                             ]
 
-            print("test queries: ", len(test_queries))
+            #print("test queries: ", len(test_queries))
         
             all_queries += test_queries
 
         if corpus.ds is Dataset and raw_ds is Dataset:
             raw_ds = concatenate_datasets([raw_ds, corpus.ds['test']]) 
 
-    print("all queries amount: ", len(all_queries))
+    #print("all queries amount: ", len(all_queries))
 
     dataset = Dataset_real(raw_ds)
+
+    #print("Dataset length: ", len(dataset))
     
     retriever = Retriever 
 
@@ -84,14 +89,7 @@ def main(cfg):
         examples = 10
 
         if cfg.model.mode == 'inference':
-            top_k_documents, top_k_cosine_scores = retriever.run_inference(all_queries, corpus, k_value, examples)
-
-            for question_index, question in enumerate(top_k_documents):
-                print("most relevant documents for question ", question_index, ": ")
-                for document_index, document in enumerate(question):
-                    print("document: ", document, ": cosine score: ", (top_k_cosine_scores[question_index][document_index]).item())
-                print("actual most relevant documents for question ", question_index, ": ", all_queries[question_index].relevant_document_ids)
-                print()
+            retriever.run_inference(self, tokenized_questions_tensor, tokenized_texts_tensor, k_value = None)
 
 
         elif cfg.model.mode == 'train':
